@@ -2,7 +2,13 @@ import asyncio
 import datetime
 import aiohttp
 from more_itertools import chunked
-from  models import engine, Session, Base, SwapiPeople
+from sqlalchemy import MetaData
+
+from models import engine, Session, Base, SwapiPeople
+from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects.postgresql import insert
+
+metadata = MetaData()
 
 
 async def get_people(people_id):
@@ -15,8 +21,11 @@ async def get_people(people_id):
 
 async def paste_to_db(persons_json):
     async with Session() as session:
-        orm_objects = [SwapiPeople(json=item) for item in persons_json]
-        session.add_all(orm_objects)
+        #orm_objects = [SwapiPeople(json=item) for item in persons_json]
+
+        session.add_all([
+            SwapiPeople(name='daniil')
+        ])
         await session.commit()
 
 
@@ -24,18 +33,13 @@ async def main():
     async with engine.begin() as con:
         await con.run_sync(Base.metadata.create_all)
 
-    person_coros = (get_people(i) for i in range(1, 50))
+    person_coros = (get_people(i) for i in range(1, 2))
     person_coros_chunked = chunked(person_coros, 5)
-
+    tasks = []
     for person_coros_chunk in person_coros_chunked:
         persons = await asyncio.gather(*person_coros_chunk)
-        asyncio.create_task(paste_to_db(persons))
-        tasks = asyncio.all_tasks() - {
-            asyncio.current_task(),
-        }
-        result=await asyncio.gather(*tasks)
-        print(result)
-
+        tasks.append(asyncio.create_task(paste_to_db(persons)))
+    await asyncio.gather(*tasks)
 
 
 if __name__ == "__main__":
@@ -43,6 +47,8 @@ if __name__ == "__main__":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     # data = await resp.json(content_type=None)
     asyncio.run(main())
+
+
     print(datetime.datetime.now() - start)
 
 
