@@ -45,7 +45,6 @@ async def main():
 if __name__ == "__main__":
     start = datetime.datetime.now()
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    # data = await resp.json(content_type=None)
     asyncio.run(main())
 
 
